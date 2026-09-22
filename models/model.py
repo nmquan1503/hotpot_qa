@@ -2,14 +2,17 @@ import torch.nn as nn
 import config
 
 from minimal_attention.models import Encoder, EncoderConfig
+from data.tokenizer import Tokenizer
 
 
 class Model(nn.Module):
     def __init__(self):
         super().__init__()
 
+        tokenizer = Tokenizer()
+
         self.encoder = Encoder(EncoderConfig(
-            vocab_size=config.VOCAB_SIZE,
+            vocab_size=tokenizer.vocab_size,
             model_dim=config.MODEL_DIM,
             head_dim=config.HEAD_DIM,
             attn_log_gate_penalty=config.ATTN_LOG_GATE_PENALTY,
@@ -21,6 +24,8 @@ class Model(nn.Module):
             dropout_rate=config.DROPOUT_RATE,
             device=config.DEVICE,
         ))
+
+        self.encoder.warmup(config.BATCH_SIZE)
 
         self.qa_outputs = nn.Linear(config.MODEL_DIM, 2)
         self.answer_type = nn.Linear(config.MODEL_DIM, 3)
