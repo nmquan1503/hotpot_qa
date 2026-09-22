@@ -22,7 +22,7 @@ class Model(nn.Module):
             ssm_chunk_size=config.SSM_CHUNK_SIZE,
             num_layers=config.NUM_LAYERS,
             dropout_rate=config.DROPOUT_RATE,
-            device=config.DEVICE,
+            device="cuda",
         ))
 
         self.encoder.warmup(config.BATCH_SIZE)
