@@ -27,7 +27,7 @@ def or_ce_span_loss(start_logits, end_logits, start_positions, end_positions):
     loss = -log_sum
 
     has_span = valid.any(dim=1)
-    loss = loss * has_span.float()
+    loss = torch.where(has_span, loss, torch.zeros_like(loss))
 
     return loss.sum() / has_span.sum().clamp(min=1)
 
@@ -79,7 +79,6 @@ def train():
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=config.LEARNING_RATE,
-        weight_decay=config.WEIGHT_DECAY,
     )
 
     trainer = Trainer(
