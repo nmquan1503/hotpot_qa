@@ -1,0 +1,155 @@
+import torch
+from tqdm import tqdm
+
+import config
+
+
+class Trainer:
+    def __init__(
+        self,
+        model,
+        train_loader,
+        dev_loader,
+        optimizer,
+        loss_fn,
+    ):
+        self.model = model
+        self.train_loader = train_loader
+        self.dev_loader = dev_loader
+        self.optimizer = optimizer
+        self.loss_fn = loss_fn
+
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
+        self.model.to(self.device)
+
+        self.best_dev_loss = float("inf")
+        self.train_losses = []
+        self.dev_losses = []
+        self.start_epoch = 1
+
+        if config.RESUME_TRAINING:
+            checkpoint = torch.load(
+                config.LAST_CHECKPOINT_PATH,
+                map_location=self.device,
+            )
+
+            self.model.load_state_dict(checkpoint["model"])
+            self.optimizer.load_state_dict(checkpoint["optimizer"])
+            self.train_losses = checkpoint["train_losses"]
+            self.dev_losses = checkpoint["dev_losses"]
+
+            if self.dev_losses:
+                self.best_dev_loss = min(self.dev_losses)
+
+            self.start_epoch = len(self.train_losses) + 1
+
+    def train(self):
+        for epoch in range(
+            self.start_epoch,
+            self.start_epoch + config.NUM_EPOCHS,
+        ):
+            print("=" * 10 + f" Epoch {epoch} " + "=" * 10)
+
+            train_loss = self._train_one_epoch()
+            dev_loss = self._eval()
+
+            self.train_losses.append(train_loss)
+            self.dev_losses.append(dev_loss)
+
+            if dev_loss < self.best_dev_loss:
+                self.best_dev_loss = dev_loss
+
+                torch.save(
+                    self.model.state_dict(),
+                    config.BEST_MODEL_PATH,
+                )
+
+                print(">>> Save best model")
+
+            torch.save(
+                {
+                    "model": self.model.state_dict(),
+                    "optimizer": self.optimizer.state_dict(),
+                    "train_losses": self.train_losses,
+                    "dev_losses": self.dev_losses,
+                },
+                config.LAST_CHECKPOINT_PATH,
+            )
+
+    def _train_one_epoch(self):
+        self.model.train()
+        total_loss = 0.0
+
+        for batch in tqdm(self.train_loader, desc="Train"):
+            self.optimizer.zero_grad()
+
+            input_ids = batch["input_ids"].to(self.device)
+            lengths = batch["lengths"].to(self.device)
+            start_positions = batch["start_positions"].to(self.device)
+            end_positions = batch["end_positions"].to(self.device)
+            answer_type = batch["answer_type"].to(self.device)
+
+            outputs = self.model(
+                input_ids=input_ids,
+                lengths=lengths,
+            )
+
+            loss = self.loss_fn(
+                outputs,
+                {
+                    "start_positions": start_positions,
+                    "end_positions": end_positions,
+                    "answer_type": answer_type,
+                },
+            )
+
+            total_loss += loss.item()
+
+            loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(),
+                1.0,
+            )
+
+            self.optimizer.step()
+
+        avg_loss = total_loss / len(self.train_loader)
+        print(f"Train loss: {avg_loss:.4f}")
+
+        return avg_loss
+
+    @torch.no_grad()
+    def _eval(self):
+        self.model.eval()
+        total_loss = 0.0
+
+        for batch in tqdm(self.dev_loader, desc="Dev"):
+            input_ids = batch["input_ids"].to(self.device)
+            lengths = batch["lengths"].to(self.device)
+            start_positions = batch["start_positions"].to(self.device)
+            end_positions = batch["end_positions"].to(self.device)
+            answer_type = batch["answer_type"].to(self.device)
+
+            outputs = self.model(
+                input_ids=input_ids,
+                lengths=lengths,
+            )
+
+            loss = self.loss_fn(
+                outputs,
+                {
+                    "start_positions": start_positions,
+                    "end_positions": end_positions,
+                    "answer_type": answer_type,
+                },
+            )
+
+            total_loss += loss.item()
+
+        avg_loss = total_loss / len(self.dev_loader)
+        print(f"Dev loss: {avg_loss:.4f}")
+
+        return avg_loss
