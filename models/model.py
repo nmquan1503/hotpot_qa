@@ -25,10 +25,12 @@ class Model(nn.Module):
             device="cuda",
         ))
 
-        self.encoder.warmup(config.BATCH_SIZE)
-
         self.qa_outputs = nn.Linear(config.MODEL_DIM, 2)
         self.answer_type = nn.Linear(config.MODEL_DIM, 3)
+
+        self.to("cuda")
+
+        self.encoder.warmup(config.BATCH_SIZE)
 
     def forward(
         self,
