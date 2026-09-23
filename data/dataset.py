@@ -2,6 +2,8 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 
+import config
+
 
 class QADataset(Dataset):
     def __init__(self, path, tokenizer):
@@ -65,6 +67,9 @@ class QADataset(Dataset):
                     continue
 
             input_ids = enc["input_ids"]
+
+            if len(input_ids) > config.MAX_LEN:
+                continue
 
             self.data.append({
                 "input_ids": input_ids,
