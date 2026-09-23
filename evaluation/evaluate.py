@@ -9,7 +9,6 @@ import config
 from models.model import Model
 from data.tokenizer import Tokenizer
 from data.dataloader import build_dataloader
-from minimal_attention.inference import AnalysisConfig
 
 
 MAX_SPAN_LEN = 15
@@ -96,31 +95,9 @@ def _warmup(model, loader, device):
 def evaluate(model, loader, tokenizer, device):
     model.eval()
 
-    num_heads = config.MODEL_DIM // config.HEAD_DIM
-    num_bins = 100
-
-    analysis_cfg = AnalysisConfig() if config.ANALYSIS else None
-    attn_gate_thresholds = getattr(config, "ENC_ATTN_GATE_THRESHOLDS", None)
-
-    global_attn_mass = [
-        torch.zeros(num_heads, num_bins, device=device)
-        for _ in range(config.NUM_LAYERS)
-    ]
-    global_attn_count = [
-        torch.zeros(num_heads, num_bins, device=device)
-        for _ in range(config.NUM_LAYERS)
-    ]
-    global_gate_freq = [
-        torch.zeros(num_heads, num_bins, device=device)
-        for _ in range(config.NUM_LAYERS)
-    ]
-
     total_em = 0.0
     total_f1 = 0.0
     total = 0
-
-    total_kept_ratio_sum = 0.0
-    total_batches = 0
 
     for batch in tqdm(loader, desc="Evaluating"):
         input_ids = batch["input_ids"].to(device)
@@ -129,22 +106,7 @@ def evaluate(model, loader, tokenizer, device):
         outputs = model(
             input_ids=input_ids,
             lengths=lengths,
-            attn_gate_thresholds=attn_gate_thresholds,
-            analysis_cfg=analysis_cfg,
         )
-
-        if analysis_cfg is not None:
-            batch_stats = outputs["stats"]["layers"]
-            for layer_idx in range(config.NUM_LAYERS):
-                if "non_causal_attn_gate_analysis" not in batch_stats[layer_idx]:
-                    continue
-                layer_stats = batch_stats[layer_idx]["non_causal_attn_gate_analysis"]
-                global_attn_mass[layer_idx] += layer_stats["attn_mass"]
-                global_attn_count[layer_idx] += layer_stats["attn_count"]
-                global_gate_freq[layer_idx] += layer_stats["gate_freq"]
-
-            total_kept_ratio_sum += outputs["stats"]["overall"]["kept_ratio"]
-            total_batches += 1
 
         answer_type = outputs["answer_type_logits"].argmax(dim=1)
 
@@ -174,30 +136,6 @@ def evaluate(model, loader, tokenizer, device):
 
     if total == 0:
         raise RuntimeError("Evaluation dataset is empty.")
-
-    if analysis_cfg is not None:
-        layers_stats = []
-        for layer_idx in range(config.NUM_LAYERS):
-            layers_stats.append({
-                "non_causal_attn_gate_analysis": {
-                    "attn_mass": global_attn_mass[layer_idx],
-                    "attn_count": global_attn_count[layer_idx],
-                    "gate_freq": global_gate_freq[layer_idx],
-                }
-            })
-
-        torch.save(
-            {
-                "layers": layers_stats,
-                "num_bins": num_bins,
-            },
-            "gate_attn_stats.pt",
-        )
-
-        print("Đã lưu gate_attn_stats.pt")
-        if total_batches > 0:
-            avg_kept_ratio = total_kept_ratio_sum / total_batches
-            print(f"Kept ratio trung bình: {avg_kept_ratio:.4f}")
 
     return total_em / total, total_f1 / total
 
