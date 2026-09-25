@@ -2,6 +2,8 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 
+import config
+
 
 class QADataset(Dataset):
     def __init__(self, path, tokenizer):
@@ -13,6 +15,11 @@ class QADataset(Dataset):
             answer = str(row["target"]).strip()
 
             enc = tokenizer.encode(question, context)
+            input_ids = enc["input_ids"]
+
+            if len(input_ids) > config.MAX_LEN:
+                continue
+
             sequence_ids = enc.sequence_ids()
             offset_mapping = enc["offset_mapping"]
 
@@ -59,8 +66,8 @@ class QADataset(Dataset):
                     continue
 
             self.data.append({
-                "input_ids": enc["input_ids"],
-                "lengths": len(enc["input_ids"]),
+                "input_ids": input_ids,
+                "lengths": len(input_ids),
                 "start_position": start_position,
                 "end_position": end_position,
                 "answer_type": answer_type,

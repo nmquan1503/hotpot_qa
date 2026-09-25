@@ -12,6 +12,7 @@ BEST_MODEL_PATH = "best_model.pt"
 LEARNING_RATE = 1e-3
 DROPOUT_RATE = 0.2
 RESUME_TRAINING = False
+MAX_LEN = 4096
 
 # Model config
 MODEL_DIM = 512
