@@ -26,7 +26,7 @@ def main(output_dir):
 
     train, dev = train_test_split(
         list(ds["train"]),
-        test_size=0.15,
+        test_size=0.1,
         random_state=SEED,
         shuffle=True
     )
