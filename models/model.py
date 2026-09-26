@@ -2,6 +2,7 @@ import torch.nn as nn
 import config
 
 from minimal_attention.models import Encoder, EncoderConfig
+from minimal_attention.modules import RMSNorm
 from data.tokenizer import Tokenizer
 
 
@@ -25,8 +26,13 @@ class Model(nn.Module):
             device="cuda",
         ))
 
-        self.qa_outputs = nn.Linear(config.MODEL_DIM, 2)
-        self.answer_type = nn.Linear(config.MODEL_DIM, 3)
+        self.start_norm = RMSNorm(config.MODEL_DIM)
+        self.end_norm = RMSNorm(config.MODEL_DIM)
+        self.type_norm = RMSNorm(config.MODEL_DIM)
+
+        self.start_head = nn.Linear(config.MODEL_DIM, 1)
+        self.end_head = nn.Linear(config.MODEL_DIM, 1)
+        self.type_head = nn.Linear(config.MODEL_DIM, 3)
 
         self.to("cuda")
 
@@ -51,12 +57,22 @@ class Model(nn.Module):
         else:
             hidden_states, stats = out, None
 
-        qa_logits = self.qa_outputs(hidden_states)
+        start_logits = self.start_head(
+            self.start_norm(hidden_states)
+        ).squeeze(-1)
+
+        end_logits = self.end_head(
+            self.end_norm(hidden_states)
+        ).squeeze(-1)
+
+        answer_type_logits = self.type_head(
+            self.type_norm(hidden_states[:, 0])
+        )
 
         result = {
-            "start_logits": qa_logits[..., 0],
-            "end_logits": qa_logits[..., 1],
-            "answer_type_logits": self.answer_type(hidden_states[:, 0]),
+            "start_logits": start_logits,
+            "end_logits": end_logits,
+            "answer_type_logits": answer_type_logits,
         }
 
         if stats is not None:
