@@ -9,24 +9,29 @@ from training.trainer import Trainer
 
 
 def qa_loss(outputs, batch):
+    batch_size = outputs["answer_type_logits"].size(0)
+
     type_loss = F.cross_entropy(
         outputs["answer_type_logits"],
         batch["answer_type"],
+        reduction='sum',
     )
 
     start_loss = F.cross_entropy(
         outputs["start_logits"],
         batch["start_position"],
         ignore_index=-100,
+        reduction='sum',
     )
 
     end_loss = F.cross_entropy(
         outputs["end_logits"],
         batch["end_position"],
         ignore_index=-100,
+        reduction='sum',
     )
 
-    return (type_loss + start_loss + end_loss) / 3.0
+    return (type_loss + start_loss + end_loss) / batch_size
 
 
 def train():
