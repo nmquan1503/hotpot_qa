@@ -87,8 +87,8 @@ class Trainer:
 
             input_ids = batch["input_ids"].to(self.device)
             lengths = batch["lengths"].to(self.device)
-            start_positions = batch["start_positions"].to(self.device)
-            end_positions = batch["end_positions"].to(self.device)
+            start_position = batch["start_position"].to(self.device)
+            end_position = batch["end_position"].to(self.device)
             answer_type = batch["answer_type"].to(self.device)
 
             outputs = self.model(
@@ -99,8 +99,8 @@ class Trainer:
             loss = self.loss_fn(
                 outputs,
                 {
-                    "start_positions": start_positions,
-                    "end_positions": end_positions,
+                    "start_position": start_position,
+                    "end_position": end_position,
                     "answer_type": answer_type,
                 },
             )
@@ -129,8 +129,8 @@ class Trainer:
         for batch in tqdm(self.dev_loader, desc="Dev"):
             input_ids = batch["input_ids"].to(self.device)
             lengths = batch["lengths"].to(self.device)
-            start_positions = batch["start_positions"].to(self.device)
-            end_positions = batch["end_positions"].to(self.device)
+            start_position = batch["start_position"].to(self.device)
+            end_position = batch["end_position"].to(self.device)
             answer_type = batch["answer_type"].to(self.device)
 
             outputs = self.model(
@@ -141,8 +141,8 @@ class Trainer:
             loss = self.loss_fn(
                 outputs,
                 {
-                    "start_positions": start_positions,
-                    "end_positions": end_positions,
+                    "start_position": start_position,
+                    "end_position": end_position,
                     "answer_type": answer_type,
                 },
             )

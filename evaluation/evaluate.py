@@ -9,7 +9,6 @@ import config
 from models.model import Model
 from data.tokenizer import Tokenizer
 from data.dataloader import build_dataloader
-from minimal_attention.inference import AnalysisConfig
 
 
 MAX_SPAN_LEN = 15

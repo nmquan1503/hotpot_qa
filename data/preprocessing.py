@@ -25,8 +25,8 @@ def main(output_dir):
     ds = load_dataset("hotpotqa/hotpot_qa", "distractor")
 
     train, dev = train_test_split(
-        ds["train"],
-        test_size=0.15,
+        list(ds["train"]),
+        test_size=0.1,
         random_state=SEED,
         shuffle=True
     )

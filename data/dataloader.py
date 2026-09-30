@@ -15,28 +15,6 @@ def seed_worker(worker_id):
 def qa_collate_fn(batch, pad_id):
     input_ids = [x["input_ids"] for x in batch]
 
-    max_spans = max(
-        max(len(x["start_positions"]), 1)
-        for x in batch
-    )
-
-    start_positions = torch.full(
-        (len(batch), max_spans), -100, dtype=torch.long
-    )
-    end_positions = torch.full(
-        (len(batch), max_spans), -100, dtype=torch.long
-    )
-
-    for i, x in enumerate(batch):
-        n = len(x["start_positions"])
-        if n > 0:
-            start_positions[i, :n] = torch.tensor(
-                x["start_positions"], dtype=torch.long
-            )
-            end_positions[i, :n] = torch.tensor(
-                x["end_positions"], dtype=torch.long
-            )
-
     return {
         "input_ids": pad_sequence(
             input_ids,
@@ -47,8 +25,14 @@ def qa_collate_fn(batch, pad_id):
             [x.size(0) for x in input_ids],
             dtype=torch.long,
         ),
-        "start_positions": start_positions,
-        "end_positions": end_positions,
+        "start_position": torch.tensor(
+            [x["start_position"] for x in batch],
+            dtype=torch.long,
+        ),
+        "end_position": torch.tensor(
+            [x["end_position"] for x in batch],
+            dtype=torch.long,
+        ),
         "answer_type": torch.tensor(
             [x["answer_type"] for x in batch],
             dtype=torch.long,
