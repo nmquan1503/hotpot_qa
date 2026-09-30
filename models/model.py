@@ -30,25 +30,16 @@ class Model(nn.Module):
         self.type_head = nn.Linear(config.MODEL_DIM, 3)
 
         self.to("cuda")
-        
+
     def forward(
         self,
         input_ids,
         lengths,
-        attn_gate_thresholds=None,
-        analysis_cfg=None,
     ):
-        out = self.encoder(
+        hidden_states = self.encoder(
             input_ids=input_ids,
             lengths=lengths,
-            attn_gate_thresholds=attn_gate_thresholds,
-            analysis_cfg=analysis_cfg,
         )
-
-        if analysis_cfg is not None:
-            hidden_states, stats = out
-        else:
-            hidden_states, stats = out, None
 
         start_logits = self.start_head(
             self.start_norm(hidden_states)
@@ -67,8 +58,5 @@ class Model(nn.Module):
             "end_logits": end_logits,
             "answer_type_logits": answer_type_logits,
         }
-
-        if stats is not None:
-            result["stats"] = stats
 
         return result
