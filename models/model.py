@@ -30,9 +30,7 @@ class Model(nn.Module):
         self.type_head = nn.Linear(config.MODEL_DIM, 3)
 
         self.to("cuda")
-
-        self.encoder.warmup(config.BATCH_SIZE)
-
+        
     def forward(
         self,
         input_ids,
