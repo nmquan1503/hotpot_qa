@@ -17,15 +17,26 @@ def qa_loss(outputs, batch):
         reduction='sum',
     )
 
+    start_logits = outputs["start_logits"]
+    end_logits = outputs["end_logits"]
+    lengths = batch["lengths"]
+
+    mask = torch.arange(
+        start_logits.size(1),
+        device=start_logits.device,
+    ).unsqueeze(0) < lengths.unsqueeze(1)
+    start_logits = start_logits.masked_fill(~mask, float("-inf"))
+    end_logits = end_logits.masked_fill(~mask, float("-inf"))
+
     start_loss = F.cross_entropy(
-        outputs["start_logits"],
+        start_logits,
         batch["start_position"],
         ignore_index=-100,
         reduction='sum',
     )
 
     end_loss = F.cross_entropy(
-        outputs["end_logits"],
+        end_logits,
         batch["end_position"],
         ignore_index=-100,
         reduction='sum',
