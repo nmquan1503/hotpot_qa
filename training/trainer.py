@@ -102,6 +102,7 @@ class Trainer:
                     "start_position": start_position,
                     "end_position": end_position,
                     "answer_type": answer_type,
+                    "lengths": lengths,
                 },
             )
 
@@ -144,6 +145,7 @@ class Trainer:
                     "start_position": start_position,
                     "end_position": end_position,
                     "answer_type": answer_type,
+                    "lengths": lengths,
                 },
             )
 
